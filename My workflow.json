@@ -1,0 +1,283 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "최근 한 주간 AI 서비스 출시 소식을 리서치해줘",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a meticulous **AI Product-Launch Research Agent**.  \nYour only external capability is the **“Research” tool**, which returns excerpts + URLs.\n\nTASK  \n1. Detect the **8–10 most consequential AI product / feature launches or upgrades** announced in the last **7 days**.  \n• Today is {{ $today.format('yyyy-MM-dd') }}  \n\n2. For each launch, explain **why it matters** to the AI ecosystem, focusing on practical impact (productivity boost, new capability, market share shift, regulatory signal, hardware acceleration).\n\n──────────────────────────INFORMATION-GATHERING RULES  \n• **Make exactly ONE (1) Research call.**  \n• Build a concise query that blends generic AI terms with launch triggers, e.g.:\n\n  `\"AI product launch\" OR \"new AI feature\" OR     \"open-source LLM release\" OR \"AI Agent\"`\n\n  AND `(\"past week\" OR \"지난 7일\")`\n\n• Set recency ≤ 7 days.  \n• Pull **more than 10 distinct reputable sources** (tier-1 tech media, company blogs, regulator posts, peer-review).  \n• Ignore paywalled or duplicate links.\n\n──────────────────────────ANALYSIS & SYNTHESIS RULES  \n• Cross-check facts; flag discrepancies.  \n• For each launch, tag:  \n  – **Impact area:** Model / Service∙Product / Productivity / Business / Regulation / Hardware  \n  – **Impact strength:** High / Medium / Low  \n• Rank stories by expected market influence (High first).  \n• Emphasise *what’s new* and *tangible benefit*.\n\n────────────────────────────────────────\n\nSTYLE GUIDE (한국어)\n• 1 000–1 500 단어 내외, 군더더기 없이.\n• 기술용어(LLM, GPU, RLHF 등)는 원어 그대로 유지.\n• 숫자·인용 임의 생성 금지; 불확실하면 “n/a”."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7a6e481a-d1ca-43c5-a94a-ea931c9d59c1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        208
+      ],
+      "id": "b8a3d640-6d14-408b-abe2-b69d3e62e068",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "cyccqtRxRG0Gj3Wc",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "scheduled_research_sessions"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        176,
+        208
+      ],
+      "id": "0cc6bf4d-b975-4652-98b1-5cbcc4ee9e7b",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "messages": {
+          "message": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message0_Text', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {
+          "searchRecency": "week"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 2,
+      "position": [
+        352,
+        208
+      ],
+      "id": "06ff69eb-314d-4860-abbe-52a9f2f29090",
+      "name": "RESEARCH",
+      "credentials": {
+        "perplexityApi": {
+          "id": "SA3ZmIbmw3iRFFCy",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 2,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "70d9cfa9-69eb-4608-adfd-527239a28fa2",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "gminsu9857@gmail.com",
+        "subject": "=Daily week News about AI Technology [ {{ $('Schedule Trigger').item.json['Readable date'] }}]",
+        "message": "={{ $json.output[0].content[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "2a39da68-a603-4296-959b-59bcb25a0efe",
+      "name": "Send a message",
+      "webhookId": "622287d6-b812-4d32-a101-449ec4ae0785",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hRMlehkg4XcfRDZs",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "html": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "b07f2095-c4b1-4fc5-acac-88e73af9fe1b",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Beautify the HTML below using inline CSS styling for an email. Format it like a modern newsletter. Output only the results without any header elements."
+            },
+            {
+              "content": "={{ $json.data }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "8dd8b432-db44-4cf8-b06f-54e63bc27d7f",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "cyccqtRxRG0Gj3Wc",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RESEARCH": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "286f6b18-484d-468a-b8d6-c95d6cdf80e0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eeefcd0b126480bf34d99b3da3c0291075a21785a0571b5dd4c829f8c76e9eee"
+  },
+  "nodeGroups": [],
+  "id": "FZrtb7WzOYAPzBCj",
+  "tags": []
+}
